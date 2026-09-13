@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador · Arquitectura y Componentes del PC Moderno</title>
+<style>
+/* ============================================================
+   VARIABLES Y RESET
+   ============================================================ */
+:root{
+  --bg:#0b131d;
+  --bg2:#0f1a26;
+  --card:#16222f;
+  --card2:#1b2a3a;
+  --linea:#2b3d52;
+  --texto:#e8f0f8;
+  --muted:#93a5b8;
+  --accent:#00d1b2;
+  --accent2:#3fa9f5;
+  --ok:#2ecc71;
+  --err:#e74c3c;
+  --warn:#f1c40f;
+  --radio:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;
+  background:linear-gradient(180deg,#0b131d 0%,#0f1a26 55%,#0b131d 100%);
+  background-attachment:fixed;
+  color:var(--texto);
+  font-size:16px;
+  line-height:1.55;
+  min-height:100vh;
+  padding-bottom:40px;
+}
+
+/* ============================================================
+   HEADER + BARRA DE PROGRESO
+   ============================================================ */
+header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(11,19,29,.96);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--linea);
+  padding:10px 14px 8px;
+}
+header h1{
+  margin:0 0 8px;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.4px;
+  color:var(--accent);
+  text-transform:uppercase;
+  text-align:center;
+}
+.progress-wrap{
+  width:100%;height:9px;background:#1d2b3a;border-radius:99px;overflow:hidden;
+  border:1px solid #24384d;
+}
+.progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#00b894,#00d1b2 45%,#3fa9f5);
+  border-radius:99px;
+  transition:width .45s cubic-bezier(.4,0,.2,1);
+}
+.progress-label{
+  font-size:12px;color:var(--muted);text-align:center;margin-top:5px;letter-spacing:.3px;
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+main{max-width:760px;margin:0 auto;padding:16px 14px 60px;}
+.pantalla{display:none;animation:fade .35s ease;}
+.pantalla.activa{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+.modulo-header{margin-bottom:14px;}
+.badge{
+  display:inline-block;
+  background:linear-gradient(90deg,rgba(0,209,178,.18),rgba(63,169,245,.14));
+  border:1px solid rgba(0,209,178,.45);
+  color:var(--accent);
+  font-size:12px;font-weight:700;letter-spacing:1px;
+  padding:4px 12px;border-radius:99px;text-transform:uppercase;
+}
+.modulo-header h2{
+  margin:10px 0 0;font-size:22px;line-height:1.25;font-weight:700;
+}
+.modulo-header h2 span{color:var(--accent2);}
+
+/* ============================================================
+   TARJETAS DE TEORÍA
+   ============================================================ */
+.card{
+  background:var(--card);
+  border:1px solid var(--linea);
+  border-left:4px solid var(--accent2);
+  border-radius:var(--radio);
+  padding:14px 16px;
+  margin-bottom:16px;
+  font-size:15px;
+  color:#d5e2ef;
+}
+.card h3{margin:0 0 8px;font-size:16px;color:var(--accent);}
+.card ul{margin:8px 0 0;padding-left:20px;}
+.card li{margin-bottom:6px;}
+.card b{color:#fff;}
+.card .tag{
+  display:inline-block;background:#0e1a26;border:1px solid var(--linea);
+  border-radius:8px;padding:2px 8px;font-size:13px;color:var(--accent);margin:2px 4px 2px 0;
+}
+
+/* ============================================================
+   PREGUNTAS
+   ============================================================ */
+.pregunta{
+  background:var(--card2);
+  border:1px solid var(--linea);
+  border-radius:var(--radio);
+  padding:14px;
+  margin-bottom:16px;
+}
+.enunciado{
+  margin:0 0 12px;font-size:15.5px;line-height:1.5;color:#eaf3fb;
+}
+.enunciado .num{
+  display:inline-block;background:var(--accent2);color:#06121d;
+  font-weight:800;font-size:13px;border-radius:6px;
+  padding:1px 8px;margin-right:8px;
+}
+.opciones{display:flex;flex-direction:column;gap:9px;}
+.opcion{
+  width:100%;text-align:left;
+  background:#132030;
+  border:1.5px solid var(--linea);
+  color:var(--texto);
+  font-size:15px;
+  font-family:inherit;
+  padding:13px 15px;
+  border-radius:11px;
+  cursor:pointer;
+  transition:all .18s ease;
+  min-height:50px;
+  display:flex;align-items:center;gap:10px;
+}
+.opcion:active{transform:scale(.985);}
+.opcion.sel{
+  border-color:var(--accent);
+  background:rgba(0,209,178,.13);
+  box-shadow:0 0 0 1px rgba(0,209,178,.35) inset;
+}
+.opcion.correcta{
+  border-color:var(--ok);
+  background:rgba(46,204,113,.16);
+}
+.opcion.incorrecta{
+  border-color:var(--err);
+  background:rgba(231,76,60,.16);
+}
+.opcion:disabled{pointer-events:none;}
+.opcion .marca{font-size:17px;flex-shrink:0;}
+
+select.opcion-select{
+  width:100%;
+  background:#132030;
+  border:1.5px solid var(--linea);
+  color:var(--texto);
+  font-size:15px;
+  font-family:inherit;
+  padding:13px 12px;
+  border-radius:11px;
+  min-height:50px;
+  appearance:none;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300d1b2'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:22px;
+}
+select.opcion-select:disabled{opacity:.75;}
+
+/* ============================================================
+   BOTONES GENERALES
+   ============================================================ */
+.btn{
+  display:block;width:100%;
+  border:none;border-radius:var(--radio);
+  padding:16px;
+  font-size:16.5px;font-weight:700;font-family:inherit;
+  letter-spacing:.3px;
+  cursor:pointer;
+  margin-top:12px;
+  min-height:54px;
+  transition:transform .15s ease,opacity .2s ease;
+}
+.btn:active{transform:scale(.98);}
+.btn-primario{
+  background:linear-gradient(90deg,#00b894,#00d1b2);
+  color:#04231d;
+  box-shadow:0 6px 18px -8px rgba(0,209,178,.9);
+}
+.btn-secundario{
+  background:transparent;
+  border:1.5px solid var(--accent2);
+  color:var(--accent2);
+}
+.btn-final{
+  background:linear-gradient(90deg,#3fa9f5,#00d1b2);
+  color:#04231d;
+  font-size:17px;
+}
+.btn:disabled{
+  opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;
+}
+
+/* ============================================================
+   FEEDBACK
+   ============================================================ */
+.feedback{
+  display:none;
+  margin-top:6px;margin-bottom:4px;
+  border-radius:var(--radio);
+  padding:14px 16px;
+  font-size:15px;
+  border:1px solid var(--linea);
+  background:#132030;
+}
+.feedback.visible{display:block;animation:fade .3s ease;}
+.feedback.bueno{border-color:rgba(46,204,113,.6);background:rgba(46,204,113,.10);}
+.feedback.medio{border-color:rgba(241,196,15,.6);background:rgba(241,196,15,.10);}
+.feedback.malo{border-color:rgba(231,76,60,.6);background:rgba(231,76,60,.10);}
+.feedback strong{font-size:16px;}
+
+/* ============================================================
+   EXPLORADOR PCIe (Módulo 2)
+   ============================================================ */
+.explorador{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.exp-card{
+  background:#10202e;
+  border:1.5px solid var(--linea);
+  border-radius:12px;
+  padding:12px 14px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.exp-card:active{transform:scale(.985);}
+.exp-card.revelada{border-color:var(--accent);background:rgba(0,209,178,.10);}
+.exp-titulo{display:block;font-weight:700;font-size:15.5px;color:var(--accent2);}
+.exp-card.revelada .exp-titulo{color:var(--accent);}
+.exp-info{display:block;font-size:14px;color:var(--muted);margin-top:4px;}
+.exp-card.revelada .exp-info{color:#d5e2ef;}
+
+/* ============================================================
+   SIMULADOR UEFI (Módulo 3)
+   ============================================================ */
+.uefi{
+  background:#050d16;
+  border:1.5px solid #1e3a55;
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:16px;
+  font-family:'Courier New',monospace;
+}
+.uefi-header{
+  color:#3fa9f5;font-weight:700;font-size:14px;
+  border-bottom:1px dashed #1e3a55;padding-bottom:8px;margin-bottom:10px;
+  letter-spacing:.5px;
+}
+.uefi-row{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:13.5px;color:#b9cbdc;padding:5px 0;
+}
+.uefi-row span:last-child{color:#fff;font-weight:700;text-align:right;}
+.off{color:#e74c3c !important;}
+.on{color:#2ecc71 !important;}
+.btn-uefi{
+  width:100%;margin-top:9px;padding:12px;
+  background:#0d2033;border:1.5px solid #2b5a80;color:#8fd3ff;
+  border-radius:9px;font-family:inherit;font-size:14px;font-weight:700;
+  cursor:pointer;min-height:48px;
+}
+.btn-uefi:active{transform:scale(.98);}
+.btn-uefi:disabled{opacity:.35;cursor:not-allowed;}
+.uefi-log{
+  margin-top:10px;font-size:13px;color:#2ecc71;min-height:18px;line-height:1.4;
+}
+
+/* ============================================================
+   PANEL S.M.A.R.T. (Módulo 4)
+   ============================================================ */
+.smart{
+  background:#0a1017;
+  border:1.5px solid #24405a;
+  border-radius:12px;
+  padding:0;
+  overflow:hidden;
+  margin-bottom:16px;
+  font-size:14px;
+}
+.smart-top{
+  background:#122234;padding:10px 14px;display:flex;justify-content:space-between;
+  align-items:center;border-bottom:1px solid #24405a;
+}
+.smart-top b{color:#8fd3ff;font-size:13px;letter-spacing:.5px;}
+.salud-badge{
+  background:rgba(46,204,113,.18);border:1px solid #2ecc71;color:#2ecc71;
+  padding:3px 10px;border-radius:99px;font-weight:700;font-size:12.5px;
+}
+.smart-grid{padding:8px 14px 12px;}
+.smart-row{
+  display:flex;justify-content:space-between;gap:10px;
+  padding:7px 0;border-bottom:1px dotted #1c3145;font-size:13.5px;color:#a9bccd;
+}
+.smart-row:last-child{border-bottom:none;}
+.smart-row span:last-child{color:#fff;font-weight:700;text-align:right;}
+.alerta{color:#f1c40f !important;}
+
+/* ============================================================
+   PANTALLA FINAL
+   ============================================================ */
+.panel-final{
+  background:linear-gradient(160deg,#132436,#0e1a26);
+  border:1px solid var(--linea);
+  border-radius:18px;
+  padding:20px 18px;
+  text-align:center;
+  margin-bottom:18px;
+}
+.panel-final .icono{font-size:44px;margin-bottom:6px;}
+.panel-final h2{margin:0 0 6px;font-size:22px;color:var(--accent);}
+.panel-final p{margin:0;color:var(--muted);font-size:14.5px;}
+.puntaje-grande{
+  font-size:46px;font-weight:800;color:#fff;line-height:1;margin:14px 0 4px;
+}
+.puntaje-grande small{font-size:18px;color:var(--muted);font-weight:600;}
+.resumen-mod{
+  display:flex;justify-content:space-between;font-size:14px;
+  padding:8px 2px;border-bottom:1px solid #1e2f42;color:#c4d3e2;
+}
+.resumen-mod:last-child{border-bottom:none;}
+.resumen-mod b{color:#fff;}
+textarea{
+  width:100%;min-height:110px;resize:vertical;
+  background:#0e1a26;border:1.5px solid var(--linea);border-radius:12px;
+  color:var(--texto);font-family:inherit;font-size:15px;padding:12px;
+}
+label.campo{
+  display:block;font-size:13.5px;color:var(--accent);font-weight:700;
+  margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase;
+}
+input[type=text]{
+  width:100%;
+  background:#0e1a26;border:1.5px solid var(--linea);border-radius:12px;
+  color:var(--texto);font-family:inherit;font-size:16px;
+  padding:14px 14px;min-height:52px;margin-bottom:16px;
+}
+input[type=text]:focus,textarea:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,209,178,.14);
+}
+::placeholder{color:#5c7186;}
+.pie{
+  text-align:center;font-size:11.5px;color:#4c5f72;margin-top:26px;letter-spacing:.4px;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER CON BARRA DE PROGRESO
+     ============================================================ -->
+<header>
+  <h1>🖥️ Simulador · PC Moderno</h1>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel">Progreso: 0 % · 0 de 5 módulos</div>
+</header>
+
+<main>
+
+<!-- ============================================================
+     PANTALLA DE INICIO / IDENTIFICACIÓN DEL ALUMNO
+     ============================================================ -->
+<section id="inicio" class="pantalla activa">
+  <div class="modulo-header">
+    <span class="badge">Módulo de Formación Técnica</span>
+    <h2>Arquitectura y Componentes del <span>PC Moderno</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>📋 Guía Visual y Práctica de Hardware</h3>
+    <p style="margin:0 0 8px;">Bienvenido/a al laboratorio virtual. A lo largo de <b>5 módulos</b> vas a recorrer los contenidos del <b>Material N°13</b>: placas base, zócalos, autopistas PCIe, memorias RAM, perfiles XMP/EXPO, diagnóstico S.M.A.R.T. de SSD y compatibilidad de componentes.</p>
+    <p style="margin:0;">Al finalizar podrás <b>descargar tu Trabajo Práctico en formato .doc</b> con todas tus respuestas y tu puntaje, listo para subir a Google Classroom.</p>
+  </div>
+
+  <div class="card" style="border-left-color:var(--accent);">
+    <h3>👤 Datos del alumno</h3>
+    <label class="campo" for="nombre">Apellido y Nombre</label>
+    <input type="text" id="nombre" placeholder="Ej.: Gómez, María Luz" autocomplete="off">
+    <label class="campo" for="curso">Curso / División</label>
+    <input type="text" id="curso" placeholder="Ej.: 4° Año — Técnico en Informática" autocomplete="off">
+  </div>
+
+  <button class="btn btn-primario" onclick="iniciarPractica()">▶ Comenzar la práctica</button>
+  <div class="feedback" id="fb-inicio"></div>
+</section>
+
+<!-- ============================================================
+     MÓDULO 1 — PLACA BASE Y ZÓCALOS
+     ============================================================ -->
+<section id="m1" class="pantalla">
+  <div class="modulo-header">
+    <span class="badge">Módulo 1</span>
+    <h2>La Placa Base: <span>Central de Mando</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>🔧 Conceptos clave</h3>
+    <ul>
+      <li><b>Zócalos (Sockets):</b> <span class="tag">LGA</span> pines en la placa base · <span class="tag">PGA</span> pines en el procesador · <span class="tag">BGA</span> soldado directamente.</li>
+      <li><b>VRM (Fases de Poder):</b> módulos de regulación de voltaje, cruciales para la estabilidad y la alimentación pura del CPU.</li>
+      <li><b>Chipsets:</b> arquitecturas lógicas (Intel / AMD) que dictan la cantidad de buses, puertos y posibilidades de expansión.</li>
+      <li><b>Factores de forma:</b> ATX (estándar) · Micro-ATX (compacto) · Mini-ITX (ultra-compacto).</li>
+    </ul>
+  </div>
+
+  <div class="pregunta" data-correcta="LGA" data-titulo="Zócalo con pines en la placa base">
+    <p class="enunciado"><span class="num">1</span>Un procesador Intel Core de 13.ª generación se instala en un zócalo donde los <b>pines metálicos están en la placa base</b>. ¿Qué tipo de zócalo es?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="LGA"><span class="marca">🔹</span> LGA — pines en la placa base</button>
+      <button class="opcion" data-val="PGA"><span class="marca">🔹</span> PGA — pines en el procesador</button>
+      <button class="opcion" data-val="BGA"><span class="marca">🔹</span> BGA — soldado directamente</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Mini-ITX" data-titulo="Factor de forma ultra-compacto">
+    <p class="enunciado"><span class="num">2</span>Necesitás armar el equipo más compacto posible para un gabinete reducido, manteniendo compatibilidad estándar. ¿Qué factor de forma elegís?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="ATX"><span class="marca">🔹</span> ATX (estándar)</button>
+      <button class="opcion" data-val="Micro-ATX"><span class="marca">🔹</span> Micro-ATX (compacto)</button>
+      <button class="opcion" data-val="Mini-ITX"><span class="marca">🔹</span> Mini-ITX (ultra-compacto)</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="VRM" data-titulo="Componente que alimenta al CPU">
+    <p class="enunciado"><span class="num">3</span>¿Qué sector de la placa base es el responsable de entregar <b>voltaje estable y puro</b> al procesador?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Chipset"><span class="marca">🔹</span> El Chipset</button>
+      <button class="opcion" data-val="VRM"><span class="marca">🔹</span> El VRM (fases de poder)</button>
+      <button class="opcion" data-val="Zócalo"><span class="marca">🔹</span> El zócalo (socket)</button>
+      <button class="opcion" data-val="BIOS"><span class="marca">🔹</span> El firmware BIOS/UEFI</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="BGA" data-titulo="Empaquetado soldado (notebooks)">
+    <p class="enunciado"><span class="num">4</span>En una notebook, el procesador viene <b>soldado a la placa</b> y no puede reemplazarse. ¿Qué tipo de empaquetado es?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="LGA"><span class="marca">🔹</span> LGA</button>
+      <button class="opcion" data-val="PGA"><span class="marca">🔹</span> PGA</button>
+      <button class="opcion" data-val="BGA"><span class="marca">🔹</span> BGA</button>
+    </div>
+  </div>
+
+  <div class="feedback" id="fb-m1"></div>
+  <button class="btn btn-primario btn-comprobar" onclick="comprobarModulo('m1')">✔ Comprobar respuestas</button>
+  <button class="btn btn-secundario btn-siguiente" id="sig-m1" disabled onclick="irA('m2')">Siguiente módulo →</button>
+</section>
+
+<!-- ============================================================
+     MÓDULO 2 — PCIe Y PUERTOS
+     ============================================================ -->
+<section id="m2" class="pantalla">
+  <div class="modulo-header">
+    <span class="badge">Módulo 2</span>
+    <h2>Autopistas de Datos: <span>PCIe y Puertos</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>🚀 Ancho de banda PCI Express</h3>
+    <p style="margin:0 0 6px;">La arquitectura PCIe (3.0, 4.0, 5.0) <b>duplica el ancho de banda por lane</b> en cada nueva iteración. Tocá cada tarjeta para revelar sus valores:</p>
+  </div>
+
+  <div class="explorador">
+    <div class="exp-card" data-info="≈ 0,985 GB/s por lane · ≈ 15,75 GB/s en una ranura x16">
+      <span class="exp-titulo">PCIe 3.0</span>
+      <span class="exp-info">Tocá para ver el ancho de banda ▸</span>
+    </div>
+    <div class="exp-card" data-info="≈ 1,97 GB/s por lane · ≈ 31,5 GB/s en una ranura x16 (el doble que 3.0)">
+      <span class="exp-titulo">PCIe 4.0</span>
+      <span class="exp-info">Tocá para ver el ancho de banda ▸</span>
+    </div>
+    <div class="exp-card" data-info="≈ 3,94 GB/s por lane · ≈ 63 GB/s en una ranura x16 (el doble que 4.0)">
+      <span class="exp-titulo">PCIe 5.0</span>
+      <span class="exp-info">Tocá para ver el ancho de banda ▸</span>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="x16" data-titulo="Ranura destinada a la GPU">
+    <p class="enunciado"><span class="num">1</span>¿En qué ranura PCIe se instala normalmente la <b>tarjeta gráfica dedicada</b>?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="x1"><span class="marca">🔹</span> Ranura PCIe x1</button>
+      <button class="opcion" data-val="x4"><span class="marca">🔹</span> Ranura PCIe x4</button>
+      <button class="opcion" data-val="x8"><span class="marca">🔹</span> Ranura PCIe x8</button>
+      <button class="opcion" data-val="x16"><span class="marca">🔹</span> Ranura PCIe x16</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Formato físico reversible" data-titulo="Qué define realmente el conector USB Tipo-C">
+    <p class="enunciado"><span class="num">2</span>Respecto del conector <b>USB Tipo-C</b>, ¿cuál afirmación es correcta?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Siempre USB 4.0"><span class="marca">🔹</span> Siempre implica USB 4.0 y 40 Gbps</button>
+      <button class="opcion" data-val="Formato físico reversible"><span class="marca">🔹</span> Es solo un formato físico reversible; no define protocolo ni velocidad</button>
+      <button class="opcion" data-val="Exclusivo Thunderbolt"><span class="marca">🔹</span> Es exclusivo del protocolo Thunderbolt</button>
+      <button class="opcion" data-val="Reemplaza PCIe"><span class="marca">🔹</span> Reemplaza a las ranuras PCIe de la placa base</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Thunderbolt" data-titulo="Protocolo de ultra alta velocidad">
+    <p class="enunciado"><span class="num">3</span>¿Qué protocolo ofrece <b>ultra alta velocidad</b> para transmisión de video, datos masivos y carga eléctrica simultánea?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="SATA III"><span class="marca">🔹</span> SATA III</button>
+      <button class="opcion" data-val="USB 2.0"><span class="marca">🔹</span> USB 2.0</button>
+      <button class="opcion" data-val="Thunderbolt"><span class="marca">🔹</span> Thunderbolt</button>
+      <button class="opcion" data-val="VGA"><span class="marca">🔹</span> Puerto VGA</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="El doble" data-titulo="Escalado del ancho de banda por generación PCIe">
+    <p class="enunciado"><span class="num">4</span>Si cada generación de PCIe duplica el ancho de banda por lane, ¿cuánto ofrece <b>PCIe 4.0 respecto de PCIe 3.0</b>?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="La mitad"><span class="marca">🔹</span> La mitad</button>
+      <button class="opcion" data-val="Igual"><span class="marca">🔹</span> Exactamente lo mismo</button>
+      <button class="opcion" data-val="El doble"><span class="marca">🔹</span> El doble</button>
+      <button class="opcion" data-val="El triple"><span class="marca">🔹</span> El triple</button>
+    </div>
+  </div>
+
+  <div class="feedback" id="fb-m2"></div>
+  <button class="btn btn-primario btn-comprobar" onclick="comprobarModulo('m2')">✔ Comprobar respuestas</button>
+  <button class="btn btn-secundario btn-siguiente" id="sig-m2" disabled onclick="irA('m3')">Siguiente módulo →</button>
+</section>
+
+<!-- ============================================================
+     MÓDULO 3 — RAM, XMP/EXPO Y CACHÉ
+     ============================================================ -->
+<section id="m3" class="pantalla">
+  <div class="modulo-header">
+    <span class="badge">Módulo 3</span>
+    <h2>Memoria RAM, <span>Caché y Perfiles XMP/EXPO</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>🧠 Conceptos clave</h3>
+    <ul>
+      <li><b>Formatos:</b> DIMM (PC de escritorio) vs. SO-DIMM (notebooks y equipos compactos).</li>
+      <li><b>DDR4 y DDR5</b> poseen <b>muescas físicas distintas</b> que impiden conexiones incorrectas.</li>
+      <li><b>Jerarquía de caché:</b> L1 (ultra rápida, menor capacidad) → L2 → L3 (interacción con memoria principal).</li>
+      <li><b>XMP / EXPO:</b> el hardware de memoria <b>no opera a su máxima velocidad publicitada por defecto</b>. Requiere activación manual desde el UEFI.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left-color:var(--warn);">
+    <h3>🧪 Lab del Alumno: activación de perfil en el UEFI</h3>
+    <p style="margin:0 0 10px;">Simulá el procedimiento real: <b>1)</b> activá el perfil, <b>2)</b> guardá los cambios y reiniciá. Después respondé las consignas.</p>
+
+    <div class="uefi">
+      <div class="uefi-header">⚙ UEFI SETUP UTILITY — AI TWEAKER</div>
+      <div class="uefi-row"><span>Memoria detectada:</span><span>32 GB (2 × 16 GB DIMM)</span></div>
+      <div class="uefi-row"><span>Frecuencia actual:</span><span id="uefi-freq">2133 MHz</span></div>
+      <div class="uefi-row"><span>Perfil XMP / EXPO:</span><span id="uefi-perfil" class="off">DESACTIVADO</span></div>
+      <button class="btn-uefi" id="btn-perfil">▸ Activar perfil XMP / EXPO</button>
+      <button class="btn-uefi" id="btn-guardar" disabled>💾 Guardar cambios y reiniciar</button>
+      <div class="uefi-log" id="uefi-log"></div>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Máxima velocidad publicitada" data-titulo="Efecto real de activar el perfil XMP/EXPO">
+    <p class="enunciado"><span class="num">1</span>¿Qué ocurre realmente al activar el perfil <b>XMP (Intel) / EXPO (AMD)</b> en el UEFI?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Máxima velocidad publicitada"><span class="marca">🔹</span> El módulo pasa a operar a su máxima velocidad y voltaje publicitados</button>
+      <button class="opcion" data-val="Formatea la RAM"><span class="marca">🔹</span> Se formatea la memoria RAM</button>
+      <button class="opcion" data-val="Aumenta capacidad"><span class="marca">🔹</span> Aumenta la capacidad total de la RAM</button>
+      <button class="opcion" data-val="No cambia nada"><span class="marca">🔹</span> No produce ningún cambio medible</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="L1 → L2 → L3" data-titulo="Jerarquía de memoria caché">
+    <p class="enunciado"><span class="num">2</span>Ordená la jerarquía de caché, desde la <b>más rápida y de menor capacidad</b> hacia la de mayor capacidad:</p>
+    <div class="opciones">
+      <button class="opcion" data-val="L1 → L2 → L3"><span class="marca">🔹</span> L1 → L2 → L3</button>
+      <button class="opcion" data-val="L3 → L2 → L1"><span class="marca">🔹</span> L3 → L2 → L1</button>
+      <button class="opcion" data-val="L2 → L1 → L3"><span class="marca">🔹</span> L2 → L1 → L3</button>
+      <button class="opcion" data-val="L1 → L3 → L2"><span class="marca">🔹</span> L1 → L3 → L2</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="SO-DIMM" data-titulo="Formato de memoria para notebooks">
+    <p class="enunciado"><span class="num">3</span>¿Qué formato físico de memoria corresponde a <b>notebooks y equipos compactos</b>?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="DIMM"><span class="marca">🔹</span> DIMM</button>
+      <button class="opcion" data-val="SO-DIMM"><span class="marca">🔹</span> SO-DIMM</button>
+      <button class="opcion" data-val="M.2"><span class="marca">🔹</span> M.2</button>
+      <button class="opcion" data-val="SATA"><span class="marca">🔹</span> SATA</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Muescas físicas distintas" data-titulo="Por qué DDR5 no entra en ranura DDR4">
+    <p class="enunciado"><span class="num">4</span>¿Por qué un módulo <b>DDR5 no puede insertarse</b> en una ranura DDR4?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Muescas físicas distintas"><span class="marca">🔹</span> Porque poseen muescas físicas distintas que impiden conexiones incorrectas</button>
+      <button class="opcion" data-val="Es más largo"><span class="marca">🔹</span> Porque el módulo DDR5 es más largo</button>
+      <button class="opcion" data-val="Software"><span class="marca">🔹</span> Porque el sistema operativo lo bloquea por software</button>
+      <button class="opcion" data-val="Voltaje"><span class="marca">🔹</span> Porque el voltaje es idéntico y no hay diferencia</button>
+    </div>
+  </div>
+
+  <div class="feedback" id="fb-m3"></div>
+  <button class="btn btn-primario btn-comprobar" onclick="comprobarModulo('m3')">✔ Comprobar respuestas</button>
+  <button class="btn btn-secundario btn-siguiente" id="sig-m3" disabled onclick="irA('m4')">Siguiente módulo →</button>
+</section>
+
+<!-- ============================================================
+     MÓDULO 4 — DIAGNÓSTICO S.M.A.R.T. Y TBW
+     ============================================================ -->
+<section id="m4" class="pantalla">
+  <div class="modulo-header">
+    <span class="badge">Módulo 4</span>
+    <h2>Salud de Unidades: <span>S.M.A.R.T. y TBW</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>🔍 Caso práctico</h3>
+    <p style="margin:0 0 8px;">Un cliente trae una notebook con un <b>SSD NVMe M.2</b> que "va lento y a veces se traba". Ejecutás la utilidad de diagnóstico y obtenés el siguiente reporte:</p>
+    <ul style="margin-top:6px;">
+      <li><b>S.M.A.R.T.:</b> sistema de auto-monitoreo, análisis y reporte alojado en el firmware de la unidad.</li>
+      <li><b>TBW (Terabytes Written):</b> métrica principal de garantía y vida útil del SSD.</li>
+    </ul>
+  </div>
+
+  <div class="smart">
+    <div class="smart-top">
+      <b>💽 CrystalDiskInfo — SSD NVMe 1 TB</b>
+      <span class="salud-badge">● BUENO</span>
+    </div>
+    <div class="smart-grid">
+      <div class="smart-row"><span>Temperatura</span><span>65 °C</span></div>
+      <div class="smart-row"><span>Total Host Writes</span><span>180.000 GB (180 TB)</span></div>
+      <div class="smart-row"><span>TBW garantizado por el fabricante</span><span>300 TB</span></div>
+      <div class="smart-row"><span>Sectores Reasignados</span><span class="alerta">10 (antes: 0)</span></div>
+      <div class="smart-row"><span>Horas de encendido</span><span>12.000 h</span></div>
+      <div class="smart-row"><span>Interfaz / Bus</span><span>PCIe 4.0 ×4 (NVMe)</span></div>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Bueno" data-titulo="Interpretación del estado global de salud">
+    <p class="enunciado"><span class="num">1</span>Según el panel, ¿cuál es el <b>estado global de salud</b> informado por la unidad?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Bueno"><span class="marca">🔹</span> Bueno</button>
+      <button class="opcion" data-val="Precaución"><span class="marca">🔹</span> Precaución</button>
+      <button class="opcion" data-val="Malo"><span class="marca">🔹</span> Malo</button>
+      <button class="opcion" data-val="Crítico"><span class="marca">🔹</span> Crítico / Reemplazo inmediato</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="60 %" data-titulo="Cálculo del porcentaje de TBW consumido">
+    <p class="enunciado"><span class="num">2</span>¿Qué porcentaje de la <b>vida útil garantizada (TBW)</b> se ha consumido? (180 TB escritos sobre 300 TB de garantía)</p>
+    <div class="opciones">
+      <button class="opcion" data-val="30 %"><span class="marca">🔹</span> 30 %</button>
+      <button class="opcion" data-val="60 %"><span class="marca">🔹</span> 60 %</button>
+      <button class="opcion" data-val="90 %"><span class="marca">🔹</span> 90 %</button>
+      <button class="opcion" data-val="100 %"><span class="marca">🔹</span> 100 %</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Advertencia temprana" data-titulo="Significado de sectores reasignados">
+    <p class="enunciado"><span class="num">3</span>El atributo <b>"Sectores Reasignados" pasó de 0 a 10</b>. ¿Qué implica técnicamente?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="Es normal"><span class="marca">🔹</span> Es totalmente normal y no significa nada</button>
+      <button class="opcion" data-val="Advertencia temprana"><span class="marca">🔹</span> Es una advertencia temprana de fallo inminente: hay que respaldar los datos</button>
+      <button class="opcion" data-val="Disco lleno"><span class="marca">🔹</span> Indica que el SSD está lleno</button>
+      <button class="opcion" data-val="Sobrecalentamiento"><span class="marca">🔹</span> Indica únicamente sobrecalentamiento</button>
+    </div>
+  </div>
+
+  <div class="pregunta" data-correcta="Respaldar y monitorear" data-titulo="Acción técnica recomendada">
+    <p class="enunciado"><span class="num">4</span>Como técnico, ¿cuál es la <b>acción más adecuada</b> frente a este reporte?</p>
+    <div class="opciones">
+      <button class="opcion" data-val="No hacer nada"><span class="marca">🔹</span> No hacer nada, el estado dice "Bueno"</button>
+      <button class="opcion" data-val="Respaldar y monitorear"><span class="marca">🔹</span> Realizar respaldo inmediato de los datos y monitorear el atributo</button>
+      <button class="opcion" data-val="Formatear"><span class="marca">🔹</span> Formatear el disco y reinstalar el sistema</button>
+      <button class="opcion" data-val="Desactivar SMART"><span class="marca">🔹</span> Desactivar el S.M.A.R.T. para que no moleste</button>
+    </div>
+  </div>
+
+  <div class="feedback" id="fb-m4"></div>
+  <button class="btn btn-primario btn-comprobar" onclick="comprobarModulo('m4')">✔ Comprobar respuestas</button>
+  <button class="btn btn-secundario btn-siguiente" id="sig-m4" disabled onclick="irA('m5')">Siguiente módulo →</button>
+</section>
+
+<!-- ============================================================
+     MÓDULO 5 — MATRIZ DE COMPATIBILIDAD
+     ============================================================ -->
+<section id="m5" class="pantalla">
+  <div class="modulo-header">
+    <span class="badge">Módulo 5</span>
+    <h2>Matriz de Compatibilidad: <span>Ensamblaje Virtual</span></h2>
+  </div>
+
+  <div class="card">
+    <h3>🧩 Desafío de ensamblaje</h3>
+    <p style="margin:0 0 8px;">Debés seleccionar los componentes de un equipo destinado a <b>gaming y edición</b>. El sistema validará 4 <b>checkpoints</b> de compatibilidad antes del ensamblaje definitivo:</p>
+    <ul>
+      <li><b>Checkpoint 1:</b> Zócalo (LGA/AM5) y Chipset.</li>
+      <li><b>Checkpoint 2:</b> Soporte de generación DDR (4 o 5).</li>
+      <li><b>Checkpoint 3:</b> Disponibilidad y líneas PCIe para M.2.</li>
+      <li><b>Checkpoint 4:</b> Puerto PCIe x16 y requerimiento de watts.</li>
+    </ul>
+    <p style="margin:10px 0 0;font-size:14px;color:#f1c40f;">⚠ Recordá el concepto de <b>cuello de botella (bottleneck)</b>: si el CPU es lento, frena el flujo de datos hacia una GPU potente y se desperdician recursos gráficos.</p>
+  </div>
+
+  <div class="pregunta" data-titulo="Checkpoint 1 — Procesador (CPU)">
+    <p class="enunciado"><span class="num">1</span><b>Procesador (CPU)</b></p>
+    <select class="opcion-select" id="sel-cpu">
+      <option value="">— Seleccioná un procesador —</option>
+      <option value="Intel|LGA1700">Intel Core i5-13400 (Zócalo LGA1700)</option>
+      <option value="AMD|AM5">AMD Ryzen 5 7600 (Zócalo AM5)</option>
+    </select>
+  </div>
+
+  <div class="pregunta" data-titulo="Checkpoint 1 — Placa Base (Motherboard)">
+    <p class="enunciado"><span class="num">2</span><b>Placa Base (Motherboard)</b></p>
+    <select class="opcion-select" id="sel-mobo">
+      <option value="">— Seleccioná una placa base —</option>
+      <option value="LGA1700|DDR4|M2-4.0">ASUS PRIME B760M-A · LGA1700 · DDR4 · 1× M.2 PCIe 4.0</option>
+      <option value="LGA1700|DDR5|M2-4.0">MSI PRO B760-P · LGA1700 · DDR5 · 1× M.2 PCIe 4.0</option>
+      <option value="AM5|DDR5|M2-5.0">GIGABYTE B650M · AM5 · DDR5 · 1× M.2 PCIe 5.0</option>
+    </select>
+  </div>
+
+  <div class="pregunta" data-titulo="Checkpoint 2 — Memoria RAM">
+    <p class="enunciado"><span class="num">3</span><b>Memoria RAM</b></p>
+    <select class="opcion-select" id="sel-ram">
+      <option value="">— Seleccioná la memoria —</option>
+      <option value="DDR4">Módulo DDR4 3200 MHz (DIMM)</option>
+      <option value="DDR5">Módulo DDR5 5600 MHz (DIMM)</option>
+    </select>
+  </div>
+
+  <div class="pregunta" data-titulo="Checkpoint 3 — Almacenamiento">
+    <p class="enunciado"><span class="num">4</span><b>Unidad de almacenamiento</b></p>
+    <select class="opcion-select" id="sel-ssd">
+      <option value="">— Seleccioná el almacenamiento —</option>
+      <option value="NVMe">SSD NVMe M.2 PCIe 4.0 (aprovecha la ranura M.2 Key M)</option>
+      <option value="SATA-SSD">SSD SATA III 2.5"</option>
+      <option value="HDD">HDD 3.5" SATA III</option>
+    </select>
+  </div>
+
+  <div class="pregunta" data-titulo="Checkpoint 4 — Fuente de Alimentación">
+    <p class="enunciado"><span class="num">5</span><b>Fuente de Alimentación (PSU)</b> — La GPU elegida es una <b>RTX 4060</b>, que requiere un mínimo de <b>550 W</b> y conector PCIe dedicado.</p>
+    <select class="opcion-select" id="sel-psu">
+      <option value="">— Seleccioná la fuente —</option>
+      <option value="450W">Fuente genérica de 450 W (sin conector PCIe dedicado)</option>
+      <option value="650W">Fuente 650 W 80+ Bronze (con conector PCIe 8 pines)</option>
+    </select>
+  </div>
+
+  <div class="feedback" id="fb-m5"></div>
+  <button class="btn btn-primario" id="btn-validar-m5" onclick="validarEnsamblaje()">🔎 Validar ensamblaje</button>
+  <button class="btn btn-secundario btn-siguiente" id="sig-m5" disabled onclick="irA('final')">Ver resultados finales →</button>
+</section>
+
+<!-- ============================================================
+     PANTALLA FINAL + GENERACIÓN DEL INFORME
+     ============================================================ -->
+<section id="final" class="pantalla">
+  <div class="panel-final">
+    <div class="icono">✅</div>
+    <h2>Práctica Completada</h2>
+    <p id="final-alumno">—</p>
+    <div class="puntaje-grande" id="final-puntaje">0 <small>/ 20</small></div>
+    <p id="final-porcentaje">—</p>
+  </div>
+
+  <div class="card">
+    <h3>📊 Desglose por módulo</h3>
+    <div id="resumen-modulos"></div>
+  </div>
+
+  <div class="card" style="border-left-color:var(--accent);">
+    <h3>✍ Conclusión personal</h3>
+    <p style="margin:0 0 10px;font-size:14px;color:var(--muted);">Redactá brevemente qué aprendiste y qué te resultó más complejo de esta práctica. Este texto se incluirá en tu informe.</p>
+    <textarea id="conclusion" placeholder="Ej.: Comprendí la importancia del VRM y de los perfiles XMP/EXPO para el rendimiento real de la memoria..."></textarea>
+  </div>
+
+  <button class="btn btn-final" onclick="generarInforme()">📥 Generar y Descargar Trabajo Práctico (.doc)</button>
+  <div class="feedback" id="fb-final"></div>
+
+  <p class="pie">Material N°13 · Arquitectura y Componentes del PC Moderno · Módulo de Formación Técnica</p>
+</section>
+
+</main>
+
+<script>
+/* ============================================================================
+   ESTADO GLOBAL DE LA APLICACIÓN
+   ============================================================================ */
+const state = {
+  alumno: { nombre:'', curso:'' },
+  modulosCompletados: [],   // ['m1','m2',...]
+  puntajes: {},             // { m1:{ok,total}, ... }
+  detalles: {},             // { m1:[{pregunta,respuesta,correcta,ok}], ... }
+  xmpActivado: false,
+  ensamblajeValidado: false
+};
+
+const NOMBRES_MODULOS = {
+  m1: 'Módulo 1 — La Placa Base: Zócalos, VRM y Factores de Forma',
+  m2: 'Módulo 2 — Autopistas de Datos: PCIe y Puertos Periféricos',
+  m3: 'Módulo 3 — Memoria RAM, Caché y Perfiles XMP/EXPO',
+  m4: 'Módulo 4 — Diagnóstico S.M.A.R.T. y TBW en Almacenamiento',
+  m5: 'Módulo 5 — Matriz de Compatibilidad y Ensamblaje Virtual'
+};
+
+/* ============================================================================
+   NAVEGACIÓN Y PROGRESO
+   ============================================================================ */
+function irA(id){
+  document.querySelectorAll('.pantalla').forEach(s => s.classList.remove('activa'));
+  const destino = document.getElementById(id);
+  if(destino){
+    destino.classList.add('activa');
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+}
+
+function actualizarProgreso(){
+  const total = 5;
+  const hechos = state.modulosCompletados.length;
+  const pct = Math.round((hechos / total) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent =
+    `Progreso: ${pct} % · ${hechos} de ${total} módulos`;
+}
+
+/* ============================================================================
+   INICIO DE LA PRÁCTICA (validación de datos del alumno)
+   ============================================================================ */
+function iniciarPractica(){
+  const nombre = document.getElementById('nombre').value.trim();
+  const curso  = document.getElementById('curso').value.trim();
+  const fb = document.getElementById('fb-inicio');
+
+  if(!nombre || !curso){
+    fb.className = 'feedback visible malo';
+    fb.innerHTML = '<strong>⚠ Faltan datos.</strong><br>Completá tu <b>Apellido y Nombre</b> y tu <b>Curso/División</b> para comenzar.';
+    return;
+  }
+
+  state.alumno.nombre = nombre;
+  state.alumno.curso  = curso;
+  fb.className = 'feedback';
+  irA('m1');
+}
+
+/* ============================================================================
+   SELECCIÓN DE OPCIONES (delegación de eventos, apta para táctil)
+   ============================================================================ */
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.opcion');
+  if(!btn || btn.disabled) return;
+  const contenedor = btn.parentElement;
+  contenedor.querySelectorAll('.opcion').forEach(o => o.classList.remove('sel'));
+  btn.classList.add('sel');
+});
+
+/* ============================================================================
+   EXPLORADOR PCIe (Módulo 2)
+   ============================================================================ */
+document.querySelectorAll('.exp-card').forEach(card => {
+  card.addEventListener('click', function(){
+    if(this.classList.contains('revelada')) return;
+    this.classList.add('revelada');
+    this.querySelector('.exp-info').textContent = '📊 ' + this.dataset.info;
+  });
+});
+
+/* ============================================================================
+   SIMULADOR UEFI — PERFILES XMP / EXPO (Módulo 3)
+   ============================================================================ */
+document.getElementById('btn-perfil').addEventListener('click', function(){
+  if(state.xmpActivado) return;
+  state.xmpActivado = true;
+  const perfil = document.getElementById('uefi-perfil');
+  perfil.textContent = 'ACTIVADO (XMP / EXPO)';
+  perfil.className = 'on';
+  document.getElementById('uefi-freq').textContent = '3600 MHz (objetivo)';
+  this.disabled = true;
+  document.getElementById('btn-guardar').disabled = false;
+  document.getElementById('uefi-log').textContent = '▸ Perfil cargado en memoria. Guardá los cambios para aplicarlo.';
+});
+
+document.getElementById('btn-guardar').addEventListener('click', function(){
+  this.disabled = true;
+  const log = document.getElementById('uefi-log');
+  log.textContent = '⏳ Guardando y reiniciando el sistema...';
+  setTimeout(function(){
+    document.getElementById('uefi-freq').textContent = '3600 MHz ✔';
+    log.innerHTML = '<b>POST OK</b> — Memoria operando a 3600 MHz con el voltaje y las latencias del perfil.';
+  }, 900);
+});
+
+/* ============================================================================
+   COMPROBACIÓN GENÉRICA DE MÓDULOS (m1 a m4)
+   ============================================================================ */
+function comprobarModulo(id){
+  if(state.modulosCompletados.includes(id)) return;
+
+  /* Requisito especial del Módulo 3: haber ejecutado el simulador UEFI */
+  if(id === 'm3' && !state.xmpActivado){
+    const fb = document.getElementById('fb-m3');
+    fb.className = 'feedback visible malo';
+    fb.innerHTML = '<strong>⚠ Acción pendiente.</strong><br>Primero activá el perfil <b>XMP/EXPO</b> en el simulador UEFI y guardá los cambios.';
+    fb.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  const seccion = document.getElementById(id);
+  const preguntas = seccion.querySelectorAll('.pregunta');
+  let ok = 0, total = 0, sinResponder = 0;
+  const detalle = [];
+
+  preguntas.forEach(function(p){
+    const correcta = p.dataset.correcta;
+    const selBtn = p.querySelector('.opcion.sel');
+    const resp = selBtn ? selBtn.dataset.val : '';
+
+    if(!resp) sinResponder++;
+    const esOk = (resp === correcta);
+    total++;
+    if(esOk) ok++;
+
+    /* Marcar visualmente todas las opciones */
+    p.querySelectorAll('.opcion').forEach(function(o){
+      o.disabled = true;
+      if(o.dataset.val === correcta){
+        o.classList.add('correcta');
+        o.querySelector('.marca').textContent = '✔';
+      } else if(o.classList.contains('sel')){
+        o.classList.add('incorrecta');
+        o.querySelector('.marca').textContent = '✘';
+      }
+    });
+
+    detalle.push({
+      pregunta: p.dataset.titulo || 'Consigna',
+      respuesta: resp || '(sin responder)',
+      correcta: correcta,
+      ok: esOk
+    });
+  });
+
+  state.puntajes[id] = { ok: ok, total: total };
+  state.detalles[id] = detalle;
+  state.modulosCompletados.push(id);
+
+  /* Feedback */
+  const fb = document.getElementById('fb-' + id);
+  let clase = 'malo', mensaje = '';
+  if(ok === total){ clase = 'bueno'; mensaje = '¡Excelente! Dominás los conceptos de este módulo.'; }
+  else if(ok >= Math.ceil(total * 0.6)){ clase = 'medio'; mensaje = 'Buen trabajo, aunque conviene repasar algunos conceptos.'; }
+  else { clase = 'malo'; mensaje = 'Repasá la teoría del módulo: hay varios conceptos para reforzar.'; }
+
+  fb.className = 'feedback visible ' + clase;
+  fb.innerHTML = `<strong>Resultado: ${ok} / ${total} correctas</strong><br>${mensaje}`
+               + (sinResponder ? `<br><span style="color:#f1c40f;">Dejaste ${sinResponder} consigna(s) sin responder.</span>` : '');
+
+  /* Bloquear botón de comprobación y habilitar el siguiente */
+  seccion.querySelector('.btn-comprobar').disabled = true;
+  const sig = document.getElementById('sig-' + id);
+  if(sig) sig.disabled = false;
+
+  actualizarProgreso();
+  fb.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* ============================================================================
+   VALIDACIÓN DEL ENSAMBLAJE (Módulo 5)
+   ============================================================================ */
+function validarEnsamblaje(){
+  if(state.ensamblajeValidado) return;
+
+  const cpu  = document.getElementById('sel-cpu').value;
+  const mobo = document.getElementById('sel-mobo').value;
+  const ram  = document.getElementById('sel-ram').value;
+  const ssd  = document.getElementById('sel-ssd').value;
+  const psu  = document.getElementById('sel-psu').value;
+
+  const fb = document.getElementById('fb-m5');
+
+  if(!cpu || !mobo || !ram || !ssd || !psu){
+    fb.className = 'feedback visible malo';
+    fb.innerHTML = '<strong>⚠ Ensamblaje incompleto.</strong><br>Seleccioná todos los componentes antes de validar.';
+    fb.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  const cpuPartes  = cpu.split('|');   // [fabricante, zocalo]
+  const moboPartes = mobo.split('|');  // [zocalo, tipoDDR, m2]
+  const zocaloCPU  = cpuPartes[1];
+  const zocaloMobo = moboPartes[0];
+  const ddrMobo    = moboPartes[1];
+
+  const checkpoints = [];
+
+  /* Checkpoint 1 — Zócalo CPU ↔ Placa Base */
+  const okZocalo = (zocaloCPU === zocaloMobo);
+  checkpoints.push({
+    nombre: 'Checkpoint 1: Zócalo (LGA/AM5) y Chipset',
+    ok: okZocalo,
+    msg: okZocalo
+      ? `Zócalo compatible: <b>${zocaloCPU}</b> coincide con la placa base.`
+      : `Zócalo INCOMPATIBLE: el procesador es <b>${zocaloCPU}</b> y la placa es <b>${zocaloMobo}</b>.`
+  });
+
+  /* Checkpoint 2 — Generación DDR (placa ↔ RAM) */
+  const okRam = (ddrMobo === ram);
+  checkpoints.push({
+    nombre: 'Checkpoint 2: Soporte de generación DDR (4 o 5)',
+    ok: okRam,
+    msg: okRam
+      ? `Memoria compatible: la placa soporta <b>${ddrMobo}</b> y colocaste <b>${ram}</b>.`
+      : `Memoria INCOMPATIBLE: la placa soporta <b>${ddrMobo}</b> pero elegiste <b>${ram}</b>. Las muescas físicas son distintas.`
+  });
+
+  /* Checkpoint 3 — Almacenamiento M.2 */
+  const okSsd = (ssd === 'NVMe');
+  checkpoints.push({
+    nombre: 'Checkpoint 3: Disponibilidad y líneas PCIe para M.2',
+    ok: okSsd,
+    msg: okSsd
+      ? 'Aprovechás la ranura <b>M.2 Key M</b> con un SSD NVMe PCIe 4.0 (hasta 7000+ MB/s).'
+      : 'Estás desaprovechando la ranura <b>M.2</b> de la placa: elegiste una unidad SATA (tope ~550 MB/s).'
+  });
+
+  /* Checkpoint 4 — Alimentación (PSU ↔ GPU) */
+  const okPsu = (psu === '650W');
+  checkpoints.push({
+    nombre: 'Checkpoint 4: Puerto PCIe x16 y requerimiento de watts',
+    ok: okPsu,
+    msg: okPsu
+      ? 'Fuente adecuada: <b>650 W</b> cubre los 550 W mínimos de la RTX 4060 e incluye conector PCIe dedicado.'
+      : 'Fuente INSUFICIENTE: <b>450 W</b> no alcanza el mínimo de 550 W de la RTX 4060 y carece de conector PCIe dedicado.'
+  });
+
+  /* Puntaje del módulo */
+  const ok = checkpoints.filter(c => c.ok).length;
+  const total = checkpoints.length;
+
+  state.puntajes['m5'] = { ok: ok, total: total };
+  state.detalles['m5'] = checkpoints.map(function(c){
+    return {
+      pregunta: c.nombre,
+      respuesta: c.ok ? 'Compatible' : 'Incompatible',
+      correcta: 'Compatible',
+      ok: c.ok
+    };
+  });
+  state.modulosCompletados.push('m5');
+  state.ensamblajeValidado = true;
+
+  /* Feedback en pantalla */
+  let clase = 'malo';
+  if(ok === total) clase = 'bueno';
+  else if(ok >= 2) clase = 'medio';
+
+  let html = `<strong>Checkpoints superados: ${ok} / ${total}</strong><br><br>`;
+  checkpoints.forEach(function(c){
+    html += `<div style="margin-bottom:8px;">
+      <span style="color:${c.ok ? '#2ecc71' : '#e74c3c'};font-weight:700;">
+        ${c.ok ? '✔' : '✘'} ${c.nombre}
+      </span><br>
+      <span style="font-size:14px;color:#c4d3e2;">${c.msg}</span>
+    </div>`;
+  });
+  if(ok === total){
+    html += '<div style="margin-top:10px;color:#2ecc71;font-weight:700;">🎉 ¡Ensamblaje validado! No se detectan cuellos de botella críticos.</div>';
+  } else {
+    html += '<div style="margin-top:10px;color:#f1c40f;">⚠ Revisá los checkpoints fallidos antes del ensamblaje definitivo.</div>';
+  }
+
+  fb.className = 'feedback visible ' + clase;
+  fb.innerHTML = html;
+
+  /* Bloquear selects y botón, habilitar siguiente */
+  document.querySelectorAll('#m5 select').forEach(s => s.disabled = true);
+  document.getElementById('btn-validar-m5').disabled = true;
+  document.getElementById('sig-m5').disabled = false;
+
+  actualizarProgreso();
+  fb.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* ============================================================================
+   PANTALLA FINAL — RESULTADOS
+   ============================================================================ */
+const _irAOriginal = irA;
+irA = function(id){
+  _irAOriginal(id);
+  if(id === 'final') mostrarResultadosFinales();
+};
+
+function mostrarResultadosFinales(){
+  let totalOk = 0, totalPts = 0;
+  for(const k in state.puntajes){
+    totalOk  += state.puntajes[k].ok;
+    totalPts += state.puntajes[k].total;
+  }
+  const pct = totalPts ? Math.round((totalOk / totalPts) * 100) : 0;
+
+  document.getElementById('final-alumno').textContent =
+    state.alumno.nombre + ' · ' + state.alumno.curso;
+
+  document.getElementById('final-puntaje').innerHTML =
+    `${totalOk} <small>/ ${totalPts}</small>`;
+
+  document.getElementById('final-porcentaje').textContent =
+    `Rendimiento global: ${pct} % de respuestas correctas`;
+
+  /* Desglose por módulo */
+  let html = '';
+  ['m1','m2','m3','m4','m5'].forEach(function(id){
+    const p = state.puntajes[id] || { ok:0, total:0 };
+    html += `<div class="resumen-mod">
+      <span>${NOMBRES_MODULOS[id].split('—')[0].trim()} · ${NOMBRES_MODULOS[id].split('—')[1].trim()}</span>
+      <b>${p.ok}/${p.total}</b>
+    </div>`;
+  });
+  document.getElementById('resumen-modulos').innerHTML = html;
+}
+
+/* ============================================================================
+   GENERACIÓN Y DESCARGA DEL INFORME EN FORMATO .DOC
+   ============================================================================ */
+function generarInforme(){
+  const fb = document.getElementById('fb-final');
+
+  /* Verificación de seguridad: todos los módulos completados */
+  if(state.modulosCompletados.length < 5){
+    fb.className = 'feedback visible malo';
+    fb.innerHTML = '<strong>⚠ Práctica incompleta.</strong><br>Completá y comprobá los 5 módulos antes de generar el informe.';
+    return;
+  }
+
+  const conclusion = document.getElementById('conclusion').value.trim() || '(Sin conclusión redactada)';
+
+  /* Cálculo de puntajes */
+  let totalOk = 0, totalPts = 0;
+  for(const k in state.puntajes){
+    totalOk  += state.puntajes[k].ok;
+    totalPts += state.puntajes[k].total;
+  }
+  const pct = totalPts ? Math.round((totalOk / totalPts) * 100) : 0;
+
+  const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  /* ------------------ Construcción del cuerpo del informe ------------------ */
+  let cuerpo = '';
+
+  /* Datos del alumno */
+  cuerpo += `
+  <table>
+    <tr><th style="width:35%;">Apellido y Nombre</th><td>${state.alumno.nombre}</td></tr>
+    <tr><th>Curso / División</th><td>${state.alumno.curso}</td></tr>
+    <tr><th>Fecha de realización</th><td>${fecha}</td></tr>
+    <tr><th>Módulo temático</th><td>Material N°13 — Arquitectura y Componentes del PC Moderno</td></tr>
+    <tr><th>Puntaje final</th><td><b>${totalOk} / ${totalPts} puntos (${pct} %)</b></td></tr>
+  </table>`;
+
+  /* Detalle por módulo */
+  ['m1','m2','m3','m4','m5'].forEach(function(id){
+    const p = state.puntajes[id] || { ok:0, total:0 };
+    cuerpo += `<h2>${NOMBRES_MODULOS[id]}</h2>`;
+    cuerpo += `<p><b>Puntaje del módulo:</b> ${p.ok} / ${p.total}</p>`;
+    cuerpo += `<table>
+      <tr>
+        <th style="width:40%;">Consigna</th>
+        <th style="width:28%;">Respuesta del alumno</th>
+        <th style="width:22%;">Respuesta correcta</th>
+        <th style="width:10%;">Resultado</th>
+      </tr>`;
+    (state.detalles[id] || []).forEach(function(d){
+      cuerpo += `<tr>
+        <td>${d.pregunta}</td>
+        <td>${d.respuesta}</td>
+        <td>${d.correcta}</td>
+        <td style="text-align:center;color:${d.ok ? '#1e7e34' : '#c0392b'};"><b>${d.ok ? 'Correcto' : 'Incorrecto'}</b></td>
+      </tr>`;
+    });
+    cuerpo += `</table>`;
+  });
+
+  /* Conclusión personal */
+  cuerpo += `<h2>Conclusión personal del alumno</h2>
+             <p style="text-align:justify;">${conclusion.replace(/\n/g,'<br>')}</p>`;
+
+  /* Observaciones docentes */
+  cuerpo += `<h2>Observaciones del docente</h2>
+             <p style="height:70px;">&nbsp;</p>
+             <p style="margin-top:30px;">Firma: ______________________________&nbsp;&nbsp;&nbsp;&nbsp;Aclaración: ______________________________</p>`;
+
+  /* ------------------ Documento Word completo ------------------ */
+  const documento = `
+  <html xmlns:o='urn:schemas-microsoft-com:office:office'
+        xmlns:w='urn:schemas-microsoft-com:office:word'
+        xmlns='http://www.w3.org/TR/REC-html40'>
+  <head>
+    <meta charset='utf-8'>
+    <title>Trabajo Práctico - Hardware</title>
+    <!--[if gte mso 9]>
+    <xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml>
+    <![endif]-->
+    <style>
+      @page { size: A4; margin: 2cm; }
+      body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color:#000; }
+      h1 { font-size: 17pt; color:#0b3d5c; text-align:center; margin-bottom:2px; }
+      h2 { font-size: 12.5pt; color:#0b3d5c; border-bottom:1px solid #0b3d5c;
+           padding-bottom:3px; margin-top:20px; }
+      .subtitulo { text-align:center; font-size:11pt; color:#333; margin-top:0; }
+      table { border-collapse:collapse; width:100%; font-size:10pt; margin-bottom:8px; }
+      th, td { border:1px solid #7a8a99; padding:5px 6px; vertical-align:top; }
+      th { background:#dbe6f0; color:#0b3d5c; text-align:left; }
+      p { margin:6px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>TRABAJO PRÁCTICO DE HARDWARE</h1>
+    <p class="subtitulo">Arquitectura y Componentes del PC Moderno — Material N°13</p>
+    <p class="subtitulo">Módulo de Formación Técnica · 4.º Año Secundario Técnico-Profesional</p>
+    <hr>
+    ${cuerpo}
+    <p style="text-align:center;font-size:9pt;color:#666;margin-top:24px;">
+      Informe generado automáticamente por el Simulador Interactivo de Hardware.
+    </p>
+  </body>
+  </html>`;
+
+  /* ------------------ Descarga del archivo ------------------ */
+  const blob = new Blob(['\ufeff', documento], { type: 'application/msword' });
+  const url  = URL.createObjectURL(blob);
+  const enlace = document.createElement('a');
+
+  const nombreLimpio = state.alumno.nombre
+    .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g, '')
+    .replace(/\s+/g, '_');
+
+  enlace.href = url;
+  enlace.download = `TP_Hardware_${nombreLimpio}.doc`;
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  URL.revokeObjectURL(url);
+
+  fb.className = 'feedback visible bueno';
+  fb.innerHTML = `<strong>✅ Informe generado correctamente.</strong><br>
+    Se descargó el archivo <b>TP_Hardware_${nombreLimpio}.doc</b>.
+    Ya podés subirlo a Google Classroom.`;
+  fb.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* ============================================================================
+   INICIALIZACIÓN
+   ============================================================================ */
+actualizarProgreso();
+</script>
+</body>
+</html>
